@@ -14,26 +14,35 @@ function App() {
 
   const scanGames = async () => {
     setLoading(true);
+    const payload = { path: "./games" };
+    console.log("[Frontend] Invoking scan_directory with payload:", payload);
+    
     try {
-      // In a real app, we might ask the user for a path.
-      // For now, we'll scan a 'games' folder in the current directory.
-      const gameList: Game[] = await invoke("scan_directory", { path: "./games" });
+      const gameList: Game[] = await invoke("scan_directory", payload);
+      console.log("[Frontend] scan_directory success. Received:", gameList);
       setGames(gameList);
       setError(null);
     } catch (err) {
-      console.error(err);
-      setError("Failed to scan games. Ensure a 'games' folder exists.");
+      console.error("[Frontend] scan_directory error raw object:", err);
+      // Tauri command errors are often strings or objects with a message
+      const errorString = typeof err === 'string' ? err : JSON.stringify(err);
+      setError(`Failed to scan games: ${errorString}`);
     } finally {
       setLoading(false);
     }
   };
 
   const launchGame = async (path: string) => {
+    const payload = { gamePath: path };
+    console.log("[Frontend] Invoking launch_game with payload:", payload);
+    
     try {
-      await invoke("launch_game", { gamePath: path });
+      await invoke("launch_game", payload);
+      console.log("[Frontend] launch_game success for:", path);
     } catch (err) {
-      console.error(err);
-      alert("Failed to launch game: " + err);
+      console.error("[Frontend] launch_game error raw object:", err);
+      const errorString = typeof err === 'string' ? err : JSON.stringify(err);
+      alert(`Failed to launch game: ${errorString}`);
     }
   };
 
@@ -70,7 +79,7 @@ function App() {
               onClick={() => scanGames()}
               className="mt-4 text-sm text-red-300 underline"
             >
-              Try creating a 'games' folder and click here
+              Retry Scan
             </button>
           </div>
         ) : games.length === 0 ? (
