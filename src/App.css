@@ -175,7 +175,7 @@ body {
   );
   border-top: 1px solid rgba(100, 160, 255, 0.15);
   border-bottom: 1px solid rgba(100, 160, 255, 0.15);
-  animation: selectionPulse 4s ease-in-out infinite;
+  animation: selectionPulse 8s ease-in-out infinite;
 }
 
 @keyframes selectionPulse {
