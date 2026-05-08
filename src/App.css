@@ -192,17 +192,17 @@ body {
   inset: -20px; /* Slight bleed for nearby items */
   pointer-events: none;
   background: radial-gradient(
-    250px circle at var(--mouse-x) 50%,
-    rgba(255, 255, 255, 0.05),
+    300px circle at var(--mouse-x) 50%,
+    rgba(255, 255, 255, 0.03),
     transparent 100%
   );
-  opacity: 0.15; /* Extremely faint base visibility for cross-item glow */
-  transition: opacity 0.4s ease;
+  opacity: 0.08; /* Extremely faint base visibility */
+  transition: opacity 0.6s ease;
   z-index: 5;
 }
 
 .xmb-item.selected::after {
-  opacity: 1;
+  opacity: 0.7; /* Keep it spectral and soft */
 }
 
 /* Extra sharpness for the X-axis banding twist (Vertical component) */
@@ -212,21 +212,21 @@ body {
   top: 0;
   bottom: 0;
   left: var(--mouse-x);
-  width: 80px; /* Thinner beam */
+  width: 160px; /* Wider beam for smoother fade */
   transform: translateX(-50%);
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(255, 255, 255, 0.02) 50%, 
+    rgba(255, 255, 255, 0.01) 50%, 
     transparent 100%
   );
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.6s ease;
   z-index: 6;
 }
 
 .xmb-item.selected::before {
-  opacity: 1;
+  opacity: 0.5;
 }
 
 @keyframes selectionPulse {
