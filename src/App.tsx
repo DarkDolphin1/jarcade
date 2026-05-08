@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import GameCard from "./components/GameCard";
 
+import { Settings, Gamepad2, Globe, Box, RefreshCw } from "lucide-react";
+
 interface Game {
   name: string;
   path: string;
@@ -12,9 +14,9 @@ interface Game {
 const EMOJIS = ["🎮","🕹️","⚔️","🏎️","🚀","🐍","🧱","🥷","🐠","⚡","🎯","🏆"];
 
 const CATEGORIES = [
-  { id: "settings",icon: "⚙️", label: "Settings" },
-  { id: "game",    icon: "🎮", label: "Game"     },
-  { id: "network", icon: "🌐", label: "Network"  },
+  { id: "settings", icon: Settings, label: "Settings" },
+  { id: "game",     icon: Gamepad2, label: "Game"     },
+  { id: "network",  icon: Globe,    label: "Network"  },
 ];
 
 function Clock() {
@@ -124,7 +126,9 @@ function App() {
             className={`xmb-cat ${catIdx === i ? "active" : ""}`}
             onClick={() => setCatIdx(i)}
           >
-            <div className="xmb-cat-icon">{cat.icon}</div>
+            <div className="xmb-cat-icon">
+              <cat.icon size={24} strokeWidth={1.5} />
+            </div>
             <div className="xmb-cat-label">{cat.label}</div>
           </div>
         ))}
@@ -135,12 +139,16 @@ function App() {
       <div className="xmb-items" onMouseMove={handleMouseMove}>
         {activeCat.id === "game" ? (
           loading ? (
-            <div className="text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
+            <div className="flex items-center gap-3 text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
+              <RefreshCw size={14} className="animate-spin" />
               Initializing Library...
             </div>
           ) : games.length === 0 ? (
             <div className="xmb-item selected">
-              <div className="xmb-item-icon"><span>📦</span></div>
+              <div className="xmb-selection-bar" />
+              <div className="xmb-item-icon">
+                <Box size={28} strokeWidth={1.5} />
+              </div>
               <div className="xmb-item-info">
                 <div className="xmb-item-name">No Games Found</div>
                 <div className="xmb-item-sub">Place .jar files in the games/ directory</div>
@@ -163,7 +171,10 @@ function App() {
           )
         ) : (
           <div className="xmb-item selected">
-            <div className="xmb-item-icon"><span>{activeCat.icon}</span></div>
+            <div className="xmb-selection-bar" />
+            <div className="xmb-item-icon">
+              <activeCat.icon size={28} strokeWidth={1.5} />
+            </div>
             <div className="xmb-item-info">
               <div className="xmb-item-name">{activeCat.label}</div>
               <div className="xmb-item-sub">System Category Placeholder</div>
@@ -176,11 +187,13 @@ function App() {
         <div className="xmb-detail">
           <div className="xmb-detail-art">
             {launching ? (
-              <div className="w-full h-full flex items-center justify-center animate-spin">⚡</div>
+              <div className="w-full h-full flex items-center justify-center animate-spin">
+                <RefreshCw size={48} strokeWidth={1} />
+              </div>
             ) : selectedGame.icon ? (
               <img src={selectedGame.icon} className="w-32 h-32 object-contain" />
             ) : (
-              selectedGame.emoji
+              <Gamepad2 size={72} strokeWidth={1} className="text-white/20" />
             )}
           </div>
           <div className="xmb-detail-title">
