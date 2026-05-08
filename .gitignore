@@ -30,3 +30,4 @@ src-tauri/rms/
 freej2me.jar
 emulator/bin/
 src-tauri/target/
+*.zip

@@ -1,6 +1,5 @@
 import React from "react";
-
-import { Gamepad2 } from "lucide-react";
+import { useTheme } from "../theme/ThemeContext";
 
 interface GameCardProps {
   name: string;
@@ -11,22 +10,44 @@ interface GameCardProps {
 }
 
 const GameCard: React.FC<GameCardProps> = ({ name, onClick, selected, icon, emoji }) => {
+  const { theme } = useTheme();
+  const Icon = theme.icons.game;
+
   return (
     <div
       onClick={onClick}
-      className={`xmb-item ${selected ? "selected" : ""}`}
+      className={`xmb-item ${selected ? "selected" : ""} ${selected ? "" : theme.animations.cardHover}`}
+      style={{
+        color: theme.colors.textPrimary,
+      }}
     >
-      <div className="xmb-selection-bar" />
-      <div className="xmb-item-icon">
+      <div 
+        className="xmb-selection-bar"
+        style={{
+          background: theme.colors.selectionBar,
+          display: selected ? 'block' : 'none'
+        }}
+      />
+      <div 
+        className="xmb-item-icon"
+        style={{
+          backgroundColor: theme.styles.useGlassmorphism ? undefined : theme.colors.cardBg,
+          borderColor: theme.colors.cardBorder,
+        }}
+      >
         {icon ? (
           <img src={icon} alt={name} className="w-full h-full object-contain p-2 rounded-lg" />
         ) : (
-          <Gamepad2 size={28} strokeWidth={1.5} color="white" />
+          <Icon size={28} strokeWidth={1.5} color="white" />
         )}
       </div>
       <div className="xmb-item-info">
-        <div className="xmb-item-name">{name}</div>
-        <div className="xmb-item-sub">J2ME · Mobile Classic</div>
+        <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>
+          {name}
+        </div>
+        <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>
+          J2ME · Mobile Classic
+        </div>
       </div>
     </div>
   );

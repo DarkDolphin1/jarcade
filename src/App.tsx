@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import GameCard from "./components/GameCard";
-
-import { Settings, Gamepad2, Globe, Box, RefreshCw } from "lucide-react";
+import { useTheme } from "./theme/ThemeContext";
+import { themes } from "./theme/themes";
 
 interface Game {
   name: string;
@@ -14,19 +14,22 @@ interface Game {
 const EMOJIS = ["🎮","🕹️","⚔️","🏎️","🚀","🐍","🧱","🥷","🐠","⚡","🎯","🏆"];
 
 const CATEGORIES = [
-  { id: "settings", icon: Settings, label: "Settings" },
-  { id: "game",     icon: Gamepad2, label: "Game"     },
-  { id: "network",  icon: Globe,    label: "Network"  },
+  { id: "settings", label: "Settings" },
+  { id: "game",     label: "Game"     },
+  { id: "network",  label: "Network"  },
 ];
 
 function Clock() {
   const [time, setTime] = useState(new Date());
+  const { theme } = useTheme();
+  
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+  
   return (
-    <div className="xmb-clock">
+    <div className="xmb-clock" style={{ color: theme.colors.textSecondary }}>
       {time.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
       {"  "}
       {time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
@@ -35,6 +38,7 @@ function Clock() {
 }
 
 function App() {
+  const { theme, setTheme } = useTheme();
   const [games, setGames]               = useState<Game[]>([]);
   const [loading, setLoading]           = useState(true);
   const [selectedIdx, setSelectedIdx]   = useState(0);
@@ -88,50 +92,65 @@ function App() {
 
   const activeCat = CATEGORIES[catIdx];
   const selectedGame = activeCat.id === "game" ? games[selectedIdx] : null;
-
   const arcs = [340, 420, 500, 580, 660, 740, 820];
 
   return (
-    <div style={{ minHeight: "100vh", position: "relative", background: "#000814", overflow: "hidden" }}>
+    <div style={{ 
+      minHeight: "100vh", 
+      position: "relative", 
+      background: theme.colors.background, 
+      color: theme.colors.textPrimary,
+      overflow: "hidden" 
+    }}>
 
-      <div className="xmb-bg">
-        <div className="xmb-wave" />
-        <div className="xmb-arcs">
-          {arcs.map((r, i) => (
-            <div
-              key={r}
-              className="xmb-arc"
-              style={{
-                width: r * 2,
-                height: r * 2,
-                bottom: `-${r * 0.6}px`,
-                left: `calc(22% - ${r}px)`,
-                animationDelay: `${i * 1.5}s`,
-                animationDuration: `${10 + i * 2}s`,
-              }}
-            />
-          ))}
+      {/* ── Animated background (Only for XMB) ── */}
+      {theme.styles.showXmbBackground && (
+        <div className="xmb-bg">
+          <div className="xmb-wave" />
+          <div className="xmb-arcs">
+            {arcs.map((r, i) => (
+              <div
+                key={r}
+                className="xmb-arc"
+                style={{
+                  width: r * 2,
+                  height: r * 2,
+                  bottom: `-${r * 0.6}px`,
+                  left: `calc(22% - ${r}px)`,
+                  animationDelay: `${i * 1.5}s`,
+                  animationDuration: `${10 + i * 2}s`,
+                }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* ── Top bar ── */}
       <div className="xmb-topbar">
         <div />
         <Clock />
       </div>
 
+      {/* ── Category row ── */}
       <div className="xmb-categories">
-        {CATEGORIES.map((cat, i) => (
-          <div
-            key={cat.id}
-            className={`xmb-cat ${catIdx === i ? "active" : ""}`}
-            onClick={() => setCatIdx(i)}
-          >
-            <div className="xmb-cat-icon">
-              <cat.icon size={24} strokeWidth={1.5} color="white" />
+        {CATEGORIES.map((cat, i) => {
+          const Icon = theme.icons[cat.id as keyof typeof theme.icons] || theme.icons.fallback;
+          return (
+            <div
+              key={cat.id}
+              className={`xmb-cat ${catIdx === i ? "active" : ""}`}
+              onClick={() => setCatIdx(i)}
+            >
+              <div className="xmb-cat-icon">
+                <Icon size={24} strokeWidth={1.5} color="white" />
+              </div>
+              <div className="xmb-cat-label" style={{ color: catIdx === i ? theme.colors.textPrimary : theme.colors.textSecondary }}>
+                {cat.label}
+              </div>
             </div>
-            <div className="xmb-cat-label">{cat.label}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="xmb-separator" />
@@ -140,18 +159,18 @@ function App() {
         {activeCat.id === "game" ? (
           loading ? (
             <div className="flex items-center gap-3 text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
-              <RefreshCw size={14} className="animate-spin" color="white" />
+              <theme.icons.loading size={14} className="animate-spin" color="white" />
               Initializing Library...
             </div>
           ) : games.length === 0 ? (
             <div className="xmb-item selected">
-              <div className="xmb-selection-bar" />
-              <div className="xmb-item-icon">
-                <Box size={28} strokeWidth={1.5} color="white" />
+              <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar }} />
+              <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
+                <theme.icons.empty size={28} strokeWidth={1.5} color="white" />
               </div>
               <div className="xmb-item-info">
-                <div className="xmb-item-name">No Games Found</div>
-                <div className="xmb-item-sub">Place .jar files in the games/ directory</div>
+                <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>No Games Found</div>
+                <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>Place .jar files in the games/ directory</div>
               </div>
             </div>
           ) : (
@@ -169,15 +188,37 @@ function App() {
               />
             ))
           )
+        ) : activeCat.id === "settings" ? (
+          <div className="flex flex-col gap-4">
+             <div className="text-indigo-200/30 font-light tracking-widest text-xs uppercase mb-4">
+              Appearance Settings
+            </div>
+            {Object.values(themes).map((t) => (
+               <div 
+                key={t.id}
+                className={`xmb-item ${theme.id === t.id ? "selected" : ""} ${theme.animations.cardHover}`}
+                onClick={() => setTheme(t.id)}
+              >
+                <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar, display: theme.id === t.id ? 'block' : 'none' }} />
+                <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
+                  <theme.icons.settings size={28} strokeWidth={1.5} color="white" />
+                </div>
+                <div className="xmb-item-info">
+                  <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>{t.name}</div>
+                  <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>{theme.id === t.id ? "Active Theme" : "Click to switch"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="xmb-item selected">
-            <div className="xmb-selection-bar" />
-            <div className="xmb-item-icon">
-              <activeCat.icon size={28} strokeWidth={1.5} color="white" />
+            <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar }} />
+            <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
+              <theme.icons.network size={28} strokeWidth={1.5} color="white" />
             </div>
             <div className="xmb-item-info">
-              <div className="xmb-item-name">{activeCat.label}</div>
-              <div className="xmb-item-sub">System Category Placeholder</div>
+              <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>{activeCat.label}</div>
+              <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>System Category Placeholder</div>
             </div>
           </div>
         )}
@@ -185,21 +226,21 @@ function App() {
 
       {selectedGame && (
         <div className="xmb-detail">
-          <div className="xmb-detail-art">
+          <div className="xmb-detail-art" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
             {launching ? (
               <div className="w-full h-full flex items-center justify-center animate-spin">
-                <RefreshCw size={48} strokeWidth={1} color="white" />
+                <theme.icons.loading size={48} strokeWidth={1} color="white" />
               </div>
             ) : selectedGame.icon ? (
               <img src={selectedGame.icon} className="w-32 h-32 object-contain" />
             ) : (
-              <Gamepad2 size={72} strokeWidth={1} color="white" opacity={0.2} />
+              <theme.icons.game size={72} strokeWidth={1} color="white" style={{ opacity: 0.2 }} />
             )}
           </div>
-          <div className="xmb-detail-title">
+          <div className="xmb-detail-title" style={{ color: theme.colors.textPrimary }}>
             {selectedGame.name}
           </div>
-          <div className="xmb-detail-meta text-indigo-300/40">
+          <div className="xmb-detail-meta" style={{ color: theme.colors.textSecondary }}>
             {launching ? "Executing Application..." : "J2ME Classic · MIDP 2.0"}
           </div>
         </div>
@@ -207,16 +248,16 @@ function App() {
 
       <div className="xmb-hints">
         <div className="xmb-hint">
-          <div className="xmb-hint-btn triangle">△</div>
-          <div className="xmb-hint-label">Options</div>
+          <div className="xmb-hint-btn triangle" style={{ color: theme.colors.accent, borderColor: theme.colors.accent }}>△</div>
+          <div className="xmb-hint-label" style={{ color: theme.colors.textSecondary }}>Options</div>
         </div>
         <div className="xmb-hint">
           <div className="xmb-hint-btn circle">○</div>
-          <div className="xmb-hint-label">Back</div>
+          <div className="xmb-hint-label" style={{ color: theme.colors.textSecondary }}>Back</div>
         </div>
         <div className="xmb-hint">
           <div className="xmb-hint-btn cross">✕</div>
-          <div className="xmb-hint-label">Launch</div>
+          <div className="xmb-hint-label" style={{ color: theme.colors.textSecondary }}>Launch</div>
         </div>
       </div>
     </div>
