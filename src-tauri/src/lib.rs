@@ -47,7 +47,8 @@ fn get_game_metadata(jar_path: &Path) -> (String, Option<String>) {
             if line.starts_with("MIDlet-Name:") {
                 game_name = line.replace("MIDlet-Name:", "").trim().to_string();
             } else if line.starts_with("MIDlet-1:") {
-                let parts: Vec<&str> = line.replace("MIDlet-1:", "").split(',').collect();
+                let replaced = line.replace("MIDlet-1:", "");
+                let parts: Vec<&str> = replaced.split(',').collect();
                 if parts.len() >= 2 {
                     if game_name == jar_path.file_stem().unwrap().to_string_lossy() {
                         game_name = parts[0].trim().to_string();
