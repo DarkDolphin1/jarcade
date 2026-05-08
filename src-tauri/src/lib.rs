@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use log::{info, error, debug};
 use zip::ZipArchive;
 use base64::{Engine as _, engine::general_purpose};
-use tauri::Manager;
+use tauri::{Manager, Emitter};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct GamePersistentData {
