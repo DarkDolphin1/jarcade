@@ -50,19 +50,32 @@ function App() {
   const [selectedIdx, setSelectedIdx]   = useState(0);
   const [catIdx, setCatIdx]             = useState(1); // Default to "Game"
   const [launching, setLaunching]       = useState(false);
-  const [runningGamePath, setRunningGamePath] = useState<string | null>(null);
+  const [runningGames, setRunningGames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let unlistenStart: any;
     let unlistenExit: any;
 
     const setupListeners = async () => {
+      try {
+        const initialRunning: string[] = await invoke("get_running_games");
+        setRunningGames(new Set(initialRunning));
+      } catch (e) { console.error(e); }
+
       unlistenStart = await listen<string>("game-started", (event) => {
-        setRunningGamePath(event.payload);
+        setRunningGames(prev => {
+          const next = new Set(prev);
+          next.add(event.payload);
+          return next;
+        });
       });
 
-      unlistenExit = await listen<string>("game-exited", (_) => {
-        setRunningGamePath(null);
+      unlistenExit = await listen<string>("game-exited", (event) => {
+        setRunningGames(prev => {
+          const next = new Set(prev);
+          next.delete(event.payload);
+          return next;
+        });
         scanGames(); 
       });
     };
@@ -99,12 +112,17 @@ function App() {
 
   const launchGame = async (path: string) => {
     if (launching) return;
+
+    if (runningGames.has(path)) {
+      alert("This game instance is already active.");
+      return;
+    }
+
     setLaunching(true);
     try { await invoke("launch_game", { gamePath: path }); }
-    catch (err) { console.error(err); }
-    finally { setTimeout(() => setLaunching(false), 2000); }
+    catch (err) { alert(err); }
+    finally { setTimeout(() => setLaunching(false), 1000); }
   };
-
   const handleKey = useCallback((e: KeyboardEvent) => {
     let maxIdx = 0;
     const activeId = CATEGORIES[catIdx].id;
@@ -252,7 +270,7 @@ function App() {
                     icon={game.icon}
                     favorite={game.favorite}
                     playtime={game.playtime}
-                    isRunning={runningGamePath === game.path}
+                    isRunning={runningGames.has(game.path)}
                     onToggleFavorite={() => toggleFavorite(game)}
                     emoji={game.emoji ?? "🎮"}
                     selected={i === selectedIdx}
@@ -329,7 +347,7 @@ function App() {
             {selectedGame.name}
           </div>
           <div className="xmb-detail-meta" style={{ color: theme.colors.textSecondary }}>
-            {runningGamePath === selectedGame.path ? (
+            {runningGames.has(selectedGame.path) ? (
               <span className="flex items-center gap-2 text-green-400 font-bold uppercase tracking-widest text-[10px]">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                 Currently Running

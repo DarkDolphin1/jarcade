@@ -5,7 +5,13 @@ use std::io::{Read, Write};
 use log::{info, error, debug};
 use zip::ZipArchive;
 use base64::{Engine as _, engine::general_purpose};
-use tauri::{Manager, Emitter};
+use std::sync::Mutex;
+use std::collections::{HashMap, HashSet};
+use tauri::{Manager, Emitter, State};
+
+struct AppState {
+    running_games: Mutex<HashSet<String>>,
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct GamePersistentData {
@@ -185,9 +191,17 @@ fn add_playtime(app_handle: tauri::AppHandle, game_path: String, seconds: u64) -
 }
 
 #[tauri::command]
-fn launch_game(app_handle: tauri::AppHandle, game_path: String) -> Result<(), String> {
+fn launch_game(app_handle: tauri::AppHandle, state: State<'_, AppState>, game_path: String) -> Result<(), String> {
     info!("Attempting to launch game: {}", game_path);
     
+    // Check if already running
+    {
+        let running = state.running_games.lock().unwrap();
+        if running.contains(&game_path) {
+            return Err("This game is already running.".to_string());
+        }
+    }
+
     let jar_path = "../freej2me.jar";
     if !Path::new(jar_path).exists() {
         let err_msg = format!("Emulator JAR not found: {}", jar_path);
@@ -213,6 +227,12 @@ fn launch_game(app_handle: tauri::AppHandle, game_path: String) -> Result<(), St
     // Emit "game-started" event
     let _ = app_handle.emit("game-started", &game_path_clone);
 
+    // Track in state
+    {
+        let mut running = state.running_games.lock().unwrap();
+        running.insert(game_path_clone.clone());
+    }
+
     // Spawn a thread to wait for the process to exit
     std::thread::spawn(move || {
         let start_time = std::time::Instant::now();
@@ -221,6 +241,13 @@ fn launch_game(app_handle: tauri::AppHandle, game_path: String) -> Result<(), St
                 let duration = start_time.elapsed().as_secs();
                 info!("Game process exited with status: {:?}. Played for {} seconds.", status, duration);
                 
+                // Remove from state
+                {
+                    let state = app_handle_clone.state::<AppState>();
+                    let mut running = state.running_games.lock().unwrap();
+                    running.remove(&game_path_clone);
+                }
+
                 // Update playtime in library
                 let _ = add_playtime(app_handle_clone.clone(), game_path_clone.clone(), duration);
                 
@@ -229,6 +256,12 @@ fn launch_game(app_handle: tauri::AppHandle, game_path: String) -> Result<(), St
             }
             Err(e) => {
                 error!("Error waiting for game process: {}", e);
+                // Ensure cleanup even on error
+                {
+                    let state = app_handle_clone.state::<AppState>();
+                    let mut running = state.running_games.lock().unwrap();
+                    running.remove(&game_path_clone);
+                }
                 let _ = app_handle_clone.emit("game-exited", &game_path_clone);
             }
         }
@@ -249,12 +282,18 @@ fn toggle_favorite(app_handle: tauri::AppHandle, game_path: String) -> Result<bo
     Ok(new_val)
 }
 
+#[tauri::command]
+fn get_running_games(state: State<'_, AppState>) -> HashSet<String> {
+    state.running_games.lock().unwrap().clone()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env_logger::init();
     info!("Initializing JArcade Backend...");
 
     tauri::Builder::default()
+        .manage(AppState { running_games: Mutex::new(HashSet::new()) })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             scan_directory, 
@@ -262,7 +301,8 @@ pub fn run() {
             get_library_data,
             save_library_data,
             toggle_favorite,
-            add_playtime
+            add_playtime,
+            get_running_games
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
