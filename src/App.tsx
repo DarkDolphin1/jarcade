@@ -14,35 +14,23 @@ function App() {
 
   const scanGames = async () => {
     setLoading(true);
-    const payload = { path: "../games" };
-    console.log("[Frontend] Invoking scan_directory with payload:", payload);
-    
     try {
-      const gameList: Game[] = await invoke("scan_directory", payload);
-      console.log("[Frontend] scan_directory success. Received:", gameList);
+      // Use relative path from the backend executable's perspective
+      const gameList: Game[] = await invoke("scan_directory", { path: "../games" });
       setGames(gameList);
       setError(null);
     } catch (err) {
-      console.error("[Frontend] scan_directory error raw object:", err);
-      // Tauri command errors are often strings or objects with a message
-      const errorString = typeof err === 'string' ? err : JSON.stringify(err);
-      setError(`Failed to scan games: ${errorString}`);
+      setError(`Failed to scan games: ${typeof err === 'string' ? err : JSON.stringify(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   const launchGame = async (path: string) => {
-    const payload = { gamePath: path };
-    console.log("[Frontend] Invoking launch_game with payload:", payload);
-    
     try {
-      await invoke("launch_game", payload);
-      console.log("[Frontend] launch_game success for:", path);
+      await invoke("launch_game", { gamePath: path });
     } catch (err) {
-      console.error("[Frontend] launch_game error raw object:", err);
-      const errorString = typeof err === 'string' ? err : JSON.stringify(err);
-      alert(`Failed to launch game: ${errorString}`);
+      alert(`Failed to launch game: ${typeof err === 'string' ? err : JSON.stringify(err)}`);
     }
   };
 
@@ -51,53 +39,98 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050505] bg-gradient-to-br from-[#050505] via-[#0a0a1f] to-[#050505] p-8 text-white font-sans">
-      <header className="mb-12 flex justify-between items-center">
-        <div>
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-            JArcade
-          </h1>
-          <p className="text-indigo-300/60 mt-2">Retro J2ME Game Launcher</p>
-        </div>
-        <button
-          onClick={scanGames}
-          className="px-6 py-2 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 rounded-full transition-all active:scale-95"
-        >
-          Refresh Library
-        </button>
-      </header>
+    <div className="min-h-screen bg-[#02020a] text-white font-sans selection:bg-indigo-500/30">
+      {/* Background Decorative Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]"></div>
+      </div>
 
-      <main>
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="relative z-10 container mx-auto px-6 py-12">
+        <header className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white to-purple-300">
+              JArcade
+            </h1>
+            <p className="text-indigo-200/40 text-lg mt-2 font-light">
+              Your retro J2ME collection, refined.
+            </p>
           </div>
-        ) : error ? (
-          <div className="p-8 bg-red-900/20 backdrop-blur-md border border-red-500/20 rounded-xl text-center">
-            <p className="text-red-400">{error}</p>
-            <button 
-              onClick={() => scanGames()}
-              className="mt-4 text-sm text-red-300 underline"
-            >
-              Retry Scan
-            </button>
-          </div>
-        ) : games.length === 0 ? (
-          <div className="p-12 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-center">
-            <p className="text-indigo-200/50 text-xl">No games found in ./games</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {games.map((game) => (
-              <GameCard
-                key={game.path}
-                name={game.name}
-                onClick={() => launchGame(game.path)}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+          
+          <button
+            onClick={scanGames}
+            className="group relative px-8 py-3 bg-white/5 hover:bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl transition-all duration-300 active:scale-95"
+          >
+            <span className="relative z-10 flex items-center gap-2 text-indigo-100 font-medium">
+              <svg 
+                className={`w-5 h-5 transition-transform duration-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh Library
+            </span>
+          </button>
+        </header>
+
+        <main>
+          {loading ? (
+            <div className="flex flex-col justify-center items-center h-[50vh] space-y-4">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-4 border-indigo-500/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-t-indigo-500 rounded-full animate-spin"></div>
+              </div>
+              <p className="text-indigo-300/40 animate-pulse uppercase tracking-widest text-xs">Scanning games</p>
+            </div>
+          ) : error ? (
+            <div className="p-12 bg-red-500/5 backdrop-blur-2xl border border-red-500/20 rounded-3xl text-center max-w-2xl mx-auto">
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-red-100 mb-2">Discovery Failed</h2>
+              <p className="text-red-300/60 mb-8">{error}</p>
+              <button 
+                onClick={() => scanGames()}
+                className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl transition-all"
+              >
+                Retry Scan
+              </button>
+            </div>
+          ) : games.length === 0 ? (
+            <div className="p-20 bg-white/5 backdrop-blur-2xl border border-white/5 rounded-[3rem] text-center">
+              <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-12">
+                <span className="text-4xl">📂</span>
+              </div>
+              <h2 className="text-2xl font-light text-indigo-100/80 mb-2">Your library is empty</h2>
+              <p className="text-indigo-200/30 max-w-xs mx-auto">
+                Add .jar files to the <code className="bg-white/5 px-2 py-0.5 rounded text-indigo-300">games</code> folder to get started.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+              {games.map((game) => (
+                <GameCard
+                  key={game.path}
+                  name={game.name}
+                  onClick={() => launchGame(game.path)}
+                />
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+
+      <footer className="fixed bottom-0 left-0 right-0 p-6 pointer-events-none">
+        <div className="container mx-auto flex justify-end">
+           <div className="px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[10px] uppercase tracking-[0.2em] text-indigo-300/40">
+             Powered by FreeJ2ME
+           </div>
+        </div>
+      </footer>
     </div>
   );
 }
