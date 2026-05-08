@@ -5,19 +5,23 @@ import { useTheme } from "./theme/ThemeContext";
 import { themes } from "./theme/themes";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { Settings, Gamepad2, Globe, Box, RefreshCw, Star } from "lucide-react";
+
 interface Game {
   name: string;
   path: string;
   icon?: string;
   emoji?: string;
+  favorite: boolean;
+  playtime: number;
 }
 
 const EMOJIS = ["🎮","🕹️","⚔️","🏎️","🚀","🐍","🧱","🥷","🐠","⚡","🎯","🏆"];
 
 const CATEGORIES = [
-  { id: "settings", label: "Settings" },
-  { id: "game",     label: "Game"     },
-  { id: "network",  label: "Network"  },
+  { id: "settings", icon: Settings, label: "Settings" },
+  { id: "game",     icon: Gamepad2, label: "Game"     },
+  { id: "network",  icon: Globe,    label: "Network"  },
 ];
 
 function Clock() {
@@ -51,10 +55,20 @@ function App() {
     try {
       const list: Game[] = await invoke("scan_directory", { path: "../games" });
       setGames(list.map((g, i) => ({ ...g, emoji: EMOJIS[i % EMOJIS.length] })));
-    } catch {
+    } catch (err) {
+      console.error(err);
       setGames([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleFavorite = async (game: Game) => {
+    try {
+      const newStatus: boolean = await invoke("toggle_favorite", { gamePath: game.path });
+      setGames(prev => prev.map(g => g.path === game.path ? { ...g, favorite: newStatus } : g));
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -67,7 +81,6 @@ function App() {
   };
 
   const handleKey = useCallback((e: KeyboardEvent) => {
-    // Determine bounds based on active category
     let maxIdx = 0;
     const activeId = CATEGORIES[catIdx].id;
     
@@ -127,7 +140,6 @@ function App() {
       overflow: "hidden" 
     }}>
 
-      {/* ── Animated background (Only for XMB) ── */}
       {theme.styles.showXmbBackground && (
         <div className="xmb-bg">
           <div className="xmb-wave" />
@@ -150,21 +162,22 @@ function App() {
         </div>
       )}
 
-      {/* ── Top bar ── */}
       <div className="xmb-topbar">
         <div />
         <Clock />
       </div>
 
-      {/* ── Category row ── */}
       <div className="xmb-categories">
         {CATEGORIES.map((cat, i) => {
-          const Icon = theme.icons[cat.id as keyof typeof theme.icons] || theme.icons.fallback;
+          const Icon = cat.icon;
           return (
             <div
               key={cat.id}
               className={`xmb-cat ${catIdx === i ? "active" : ""}`}
-              onClick={() => setCatIdx(i)}
+              onClick={() => {
+                setCatIdx(i);
+                setSelectedIdx(0);
+              }}
             >
               <div className="xmb-cat-icon">
                 <Icon size={24} strokeWidth={1.5} color="white" />
@@ -212,6 +225,9 @@ function App() {
                     key={game.path}
                     name={game.name}
                     icon={game.icon}
+                    favorite={game.favorite}
+                    playtime={game.playtime}
+                    onToggleFavorite={() => toggleFavorite(game)}
                     emoji={game.emoji ?? "🎮"}
                     selected={i === selectedIdx}
                     onClick={() => {
@@ -287,7 +303,7 @@ function App() {
             {selectedGame.name}
           </div>
           <div className="xmb-detail-meta" style={{ color: theme.colors.textSecondary }}>
-            {launching ? "Executing Application..." : "J2ME Classic · MIDP 2.0"}
+            {launching ? "Executing Application..." : `J2ME Classic · Played ${Math.floor(selectedGame.playtime / 60)}m`}
           </div>
         </div>
       )}
