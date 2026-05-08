@@ -14,6 +14,7 @@ const GameCard: React.FC<GameCardProps> = ({ name, onClick, selected, icon, emoj
       onClick={onClick}
       className={`xmb-item ${selected ? "selected" : ""}`}
     >
+      <div className="xmb-selection-bar" />
       <div className="xmb-item-icon">
         {icon ? (
           <img src={icon} alt={name} className="w-full h-full object-contain p-2 rounded-lg" />

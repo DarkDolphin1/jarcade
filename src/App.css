@@ -156,11 +156,10 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  overflow: visible; /* Changed to visible for broad reveal */
 }
 
-/* Selected item highlight bar */
-.xmb-item.selected::before {
-  content: '';
+.xmb-selection-bar {
   position: absolute;
   left: -80px;
   right: -48px;
@@ -175,7 +174,61 @@ body {
   );
   border-top: 1px solid rgba(100, 160, 255, 0.15);
   border-bottom: 1px solid rgba(100, 160, 255, 0.15);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.xmb-item.selected .xmb-selection-bar {
+  opacity: 1;
   animation: selectionPulse 8s ease-in-out infinite;
+}
+
+/* The Banding Reveal Effect (Radial component) */
+.xmb-item::after {
+  content: '';
+  position: absolute;
+  inset: -100px; /* Expand reveal area */
+  pointer-events: none;
+  background: radial-gradient(
+    400px circle at var(--mouse-x) 50%,
+    rgba(255, 255, 255, 0.08),
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 5;
+}
+
+.xmb-item:hover::after, 
+.xmb-item.selected::after {
+  opacity: 1;
+}
+
+/* Extra sharpness for the X-axis banding twist (Vertical component) */
+.xmb-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--mouse-x);
+  width: 160px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.04) 50%, 
+    transparent 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 6;
+}
+
+.xmb-item:hover::before,
+.xmb-item.selected::before {
+  opacity: 1;
 }
 
 @keyframes selectionPulse {

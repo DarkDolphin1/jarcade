@@ -69,6 +69,14 @@ function App() {
     }
   }, [games, selectedIdx, catIdx, launching]);
 
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    (e.currentTarget as HTMLElement).style.setProperty("--mouse-x", `${x}px`);
+    (e.currentTarget as HTMLElement).style.setProperty("--mouse-y", `${y}px`);
+  }, []);
+
   useEffect(() => {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -124,7 +132,7 @@ function App() {
 
       <div className="xmb-separator" />
 
-      <div className="xmb-items">
+      <div className="xmb-items" onMouseMove={handleMouseMove}>
         {activeCat.id === "game" ? (
           loading ? (
             <div className="text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
