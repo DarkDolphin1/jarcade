@@ -127,7 +127,7 @@ function App() {
             onClick={() => setCatIdx(i)}
           >
             <div className="xmb-cat-icon">
-              <cat.icon size={24} strokeWidth={1.5} />
+              <cat.icon size={24} strokeWidth={1.5} color="white" />
             </div>
             <div className="xmb-cat-label">{cat.label}</div>
           </div>
@@ -140,14 +140,14 @@ function App() {
         {activeCat.id === "game" ? (
           loading ? (
             <div className="flex items-center gap-3 text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
-              <RefreshCw size={14} className="animate-spin" />
+              <RefreshCw size={14} className="animate-spin" color="white" />
               Initializing Library...
             </div>
           ) : games.length === 0 ? (
             <div className="xmb-item selected">
               <div className="xmb-selection-bar" />
               <div className="xmb-item-icon">
-                <Box size={28} strokeWidth={1.5} />
+                <Box size={28} strokeWidth={1.5} color="white" />
               </div>
               <div className="xmb-item-info">
                 <div className="xmb-item-name">No Games Found</div>
@@ -173,7 +173,7 @@ function App() {
           <div className="xmb-item selected">
             <div className="xmb-selection-bar" />
             <div className="xmb-item-icon">
-              <activeCat.icon size={28} strokeWidth={1.5} />
+              <activeCat.icon size={28} strokeWidth={1.5} color="white" />
             </div>
             <div className="xmb-item-info">
               <div className="xmb-item-name">{activeCat.label}</div>
@@ -188,12 +188,12 @@ function App() {
           <div className="xmb-detail-art">
             {launching ? (
               <div className="w-full h-full flex items-center justify-center animate-spin">
-                <RefreshCw size={48} strokeWidth={1} />
+                <RefreshCw size={48} strokeWidth={1} color="white" />
               </div>
             ) : selectedGame.icon ? (
               <img src={selectedGame.icon} className="w-32 h-32 object-contain" />
             ) : (
-              <Gamepad2 size={72} strokeWidth={1} className="text-white/20" />
+              <Gamepad2 size={72} strokeWidth={1} color="white" opacity={0.2} />
             )}
           </div>
           <div className="xmb-detail-title">

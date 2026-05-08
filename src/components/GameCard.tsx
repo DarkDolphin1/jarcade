@@ -21,7 +21,7 @@ const GameCard: React.FC<GameCardProps> = ({ name, onClick, selected, icon, emoj
         {icon ? (
           <img src={icon} alt={name} className="w-full h-full object-contain p-2 rounded-lg" />
         ) : (
-          <Gamepad2 size={28} strokeWidth={1.5} className="text-white/80" />
+          <Gamepad2 size={28} strokeWidth={1.5} color="white" />
         )}
       </div>
       <div className="xmb-item-info">
