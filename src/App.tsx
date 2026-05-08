@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import GameCard from "./components/GameCard";
 import { useTheme } from "./theme/ThemeContext";
 import { themes } from "./theme/themes";
@@ -49,6 +50,30 @@ function App() {
   const [selectedIdx, setSelectedIdx]   = useState(0);
   const [catIdx, setCatIdx]             = useState(1); // Default to "Game"
   const [launching, setLaunching]       = useState(false);
+  const [runningGamePath, setRunningGamePath] = useState<string | null>(null);
+
+  useEffect(() => {
+    let unlistenStart: any;
+    let unlistenExit: any;
+
+    const setupListeners = async () => {
+      unlistenStart = await listen<string>("game-started", (event) => {
+        setRunningGamePath(event.payload);
+      });
+
+      unlistenExit = await listen<string>("game-exited", (_) => {
+        setRunningGamePath(null);
+        scanGames(); 
+      });
+    };
+
+    setupListeners();
+
+    return () => {
+      if (unlistenStart) unlistenStart();
+      if (unlistenExit) unlistenExit();
+    };
+  }, []);
 
   const scanGames = async () => {
     setLoading(true);
@@ -227,6 +252,7 @@ function App() {
                     icon={game.icon}
                     favorite={game.favorite}
                     playtime={game.playtime}
+                    isRunning={runningGamePath === game.path}
                     onToggleFavorite={() => toggleFavorite(game)}
                     emoji={game.emoji ?? "🎮"}
                     selected={i === selectedIdx}
@@ -303,7 +329,12 @@ function App() {
             {selectedGame.name}
           </div>
           <div className="xmb-detail-meta" style={{ color: theme.colors.textSecondary }}>
-            {launching ? "Executing Application..." : `J2ME Classic · Played ${Math.floor(selectedGame.playtime / 60)}m`}
+            {runningGamePath === selectedGame.path ? (
+              <span className="flex items-center gap-2 text-green-400 font-bold uppercase tracking-widest text-[10px]">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                Currently Running
+              </span>
+            ) : launching ? "Executing Application..." : `J2ME Classic · Played ${Math.floor(selectedGame.playtime / 60)}m`}
           </div>
         </div>
       )}

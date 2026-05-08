@@ -10,6 +10,7 @@ interface GameCardProps {
   emoji: string;
   favorite: boolean;
   playtime: number;
+  isRunning?: boolean;
   onToggleFavorite: (e: React.MouseEvent) => void;
 }
 
@@ -21,6 +22,7 @@ const GameCard: React.FC<GameCardProps> = ({
   emoji, 
   favorite, 
   playtime, 
+  isRunning,
   onToggleFavorite 
 }) => {
   const { theme } = useTheme();
@@ -55,12 +57,19 @@ const GameCard: React.FC<GameCardProps> = ({
           <Icon size={28} strokeWidth={1.5} color="white" />
         )}
 
-        {/* Favorite Indicator */}
-        {favorite && (
-          <div className="absolute top-[-4px] right-[-4px] bg-yellow-500 rounded-full p-1 shadow-lg border border-yellow-400">
-            <Star size={10} fill="white" color="white" />
-          </div>
-        )}
+        {/* Status Indicators Overlay */}
+        <div className="absolute top-[-6px] right-[-6px] flex gap-1">
+          {isRunning && (
+             <div className="bg-green-500 rounded-full p-1 shadow-lg border border-green-400 animate-pulse">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+             </div>
+          )}
+          {favorite && (
+            <div className="bg-yellow-500 rounded-full p-1 shadow-lg border border-yellow-400">
+              <Star size={10} fill="white" color="white" />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="xmb-item-info">
@@ -83,8 +92,8 @@ const GameCard: React.FC<GameCardProps> = ({
             />
           </button>
         </div>
-        <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>
-          {playtime > 0 ? `${Math.floor(playtime / 60)}m played` : "Never played"}
+        <div className="xmb-item-sub" style={{ color: isRunning ? "#4ade80" : theme.colors.textSecondary }}>
+          {isRunning ? "Running" : playtime > 0 ? `${Math.floor(playtime / 60)}m played` : "Never played"}
         </div>
       </div>
     </div>

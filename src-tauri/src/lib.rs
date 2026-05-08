@@ -173,7 +173,19 @@ fn scan_directory(app_handle: tauri::AppHandle, path: String) -> Result<Vec<Game
 }
 
 #[tauri::command]
-fn launch_game(game_path: String) -> Result<(), String> {
+fn add_playtime(app_handle: tauri::AppHandle, game_path: String, seconds: u64) -> Result<(), String> {
+    let mut library = get_library_data(app_handle.clone());
+    let entry = library.games.entry(game_path).or_insert(GamePersistentData {
+        favorite: false,
+        playtime: 0,
+    });
+    entry.playtime += seconds;
+    save_library_data(app_handle, library)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn launch_game(app_handle: tauri::AppHandle, game_path: String) -> Result<(), String> {
     info!("Attempting to launch game: {}", game_path);
     
     let jar_path = "../freej2me.jar";
@@ -189,17 +201,40 @@ fn launch_game(game_path: String) -> Result<(), String> {
     let mut command = Command::new("java");
     command.arg("-jar").arg(jar_path).arg(game_url);
 
-    match command.spawn() {
-        Ok(child) => {
-            info!("Process spawned successfully with PID: {:?}", child.id());
-            Ok(())
+    let mut child = command.spawn().map_err(|e| {
+        let err_msg = format!("Failed to spawn java process: {} (OS Error: {:?})", e, e.raw_os_error());
+        error!("{}", err_msg);
+        err_msg
+    })?;
+
+    let game_path_clone = game_path.clone();
+    let app_handle_clone = app_handle.clone();
+    
+    // Emit "game-started" event
+    let _ = app_handle.emit("game-started", &game_path_clone);
+
+    // Spawn a thread to wait for the process to exit
+    std::thread::spawn(move || {
+        let start_time = std::time::Instant::now();
+        match child.wait() {
+            Ok(status) => {
+                let duration = start_time.elapsed().as_secs();
+                info!("Game process exited with status: {:?}. Played for {} seconds.", status, duration);
+                
+                // Update playtime in library
+                let _ = add_playtime(app_handle_clone.clone(), game_path_clone.clone(), duration);
+                
+                // Emit "game-exited" event
+                let _ = app_handle_clone.emit("game-exited", &game_path_clone);
+            }
+            Err(e) => {
+                error!("Error waiting for game process: {}", e);
+                let _ = app_handle_clone.emit("game-exited", &game_path_clone);
+            }
         }
-        Err(e) => {
-            let err_msg = format!("Failed to spawn java process: {} (OS Error: {:?})", e, e.raw_os_error());
-            error!("{}", err_msg);
-            Err(err_msg)
-        }
-    }
+    });
+
+    Ok(())
 }
 #[tauri::command]
 fn toggle_favorite(app_handle: tauri::AppHandle, game_path: String) -> Result<bool, String> {
@@ -226,7 +261,8 @@ pub fn run() {
             launch_game,
             get_library_data,
             save_library_data,
-            toggle_favorite
+            toggle_favorite,
+            add_playtime
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
