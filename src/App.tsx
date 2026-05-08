@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import GameCard from "./components/GameCard";
 import { useTheme } from "./theme/ThemeContext";
 import { themes } from "./theme/themes";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Game {
   name: string;
@@ -66,14 +67,37 @@ function App() {
   };
 
   const handleKey = useCallback((e: KeyboardEvent) => {
-    if (e.key === "ArrowUp")    setSelectedIdx(i => Math.max(0, i - 1));
-    if (e.key === "ArrowDown")  setSelectedIdx(i => Math.min(games.length - 1, i + 1));
-    if (e.key === "ArrowLeft")  setCatIdx(i => Math.max(0, i - 1));
-    if (e.key === "ArrowRight") setCatIdx(i => Math.min(CATEGORIES.length - 1, i + 1));
-    if (e.key === "Enter" && CATEGORIES[catIdx].id === "game" && games[selectedIdx]) {
-      launchGame(games[selectedIdx].path);
+    // Determine bounds based on active category
+    let maxIdx = 0;
+    const activeId = CATEGORIES[catIdx].id;
+    
+    if (activeId === "game") {
+      maxIdx = Math.max(0, games.length - 1);
+    } else if (activeId === "settings") {
+      maxIdx = Object.keys(themes).length - 1;
     }
-  }, [games, selectedIdx, catIdx, launching]);
+
+    if (e.key === "ArrowUp")    setSelectedIdx(i => Math.max(0, i - 1));
+    if (e.key === "ArrowDown")  setSelectedIdx(i => Math.min(maxIdx, i + 1));
+    
+    if (e.key === "ArrowLeft")  {
+      setCatIdx(i => Math.max(0, i - 1));
+      setSelectedIdx(0);
+    }
+    if (e.key === "ArrowRight") {
+      setCatIdx(i => Math.min(CATEGORIES.length - 1, i + 1));
+      setSelectedIdx(0);
+    }
+    
+    if (e.key === "Enter") {
+      if (activeId === "game" && games[selectedIdx]) {
+        launchGame(games[selectedIdx].path);
+      } else if (activeId === "settings") {
+        const themeId = Object.keys(themes)[selectedIdx];
+        if (themeId) setTheme(themeId);
+      }
+    }
+  }, [games, selectedIdx, catIdx, launching, setTheme]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -156,72 +180,94 @@ function App() {
       <div className="xmb-separator" />
 
       <div className="xmb-items" onMouseMove={handleMouseMove}>
-        {activeCat.id === "game" ? (
-          loading ? (
-            <div className="flex items-center gap-3 text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
-              <theme.icons.loading size={14} className="animate-spin" color="white" />
-              Initializing Library...
-            </div>
-          ) : games.length === 0 ? (
-            <div className="xmb-item selected">
-              <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar }} />
-              <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
-                <theme.icons.empty size={28} strokeWidth={1.5} color="white" />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCat.id}
+            initial={theme.transitions.tabInitial}
+            animate={theme.transitions.tabEnter}
+            exit={theme.transitions.tabExit}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            style={{ width: "100%" }}
+          >
+            {activeCat.id === "game" ? (
+              loading ? (
+                <div className="flex items-center gap-3 text-indigo-200/30 font-light tracking-widest text-xs uppercase animate-pulse">
+                  <theme.icons.loading size={14} className="animate-spin" color="white" />
+                  Initializing Library...
+                </div>
+              ) : games.length === 0 ? (
+                <div className="xmb-item selected">
+                  <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar }} />
+                  <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
+                    <theme.icons.empty size={28} strokeWidth={1.5} color="white" />
+                  </div>
+                  <div className="xmb-item-info">
+                    <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>No Games Found</div>
+                    <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>Place .jar files in the games/ directory</div>
+                  </div>
+                </div>
+              ) : (
+                games.map((game, i) => (
+                  <GameCard
+                    key={game.path}
+                    name={game.name}
+                    icon={game.icon}
+                    emoji={game.emoji ?? "🎮"}
+                    selected={i === selectedIdx}
+                    onClick={() => {
+                      setSelectedIdx(i);
+                      if (i === selectedIdx) launchGame(game.path);
+                    }}
+                  />
+                ))
+              )
+            ) : activeCat.id === "settings" ? (
+              <div className="flex flex-col gap-0">
+                <div className="text-indigo-200/20 font-light tracking-[0.2em] text-[10px] uppercase mb-6 ml-2">
+                  System Appearance
+                </div>
+                {Object.values(themes).map((t, i) => (
+                  <div 
+                    key={t.id}
+                    className={`xmb-item ${selectedIdx === i ? "selected" : ""} ${theme.animations.cardHover}`}
+                    onClick={() => {
+                      setSelectedIdx(i);
+                      setTheme(t.id);
+                    }}
+                  >
+                    <div className="xmb-selection-bar" style={{ 
+                      background: theme.colors.selectionBar, 
+                      display: selectedIdx === i ? 'block' : 'none' 
+                    }} />
+                    <div className="xmb-item-icon" style={{ 
+                      backgroundColor: theme.colors.cardBg, 
+                      borderColor: theme.colors.cardBorder 
+                    }}>
+                      <theme.icons.settings size={28} strokeWidth={1.5} color="white" />
+                    </div>
+                    <div className="xmb-item-info">
+                      <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>{t.name}</div>
+                      <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>
+                        {theme.id === t.id ? "Currently Active" : "Press Enter to apply"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="xmb-item-info">
-                <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>No Games Found</div>
-                <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>Place .jar files in the games/ directory</div>
-              </div>
-            </div>
-          ) : (
-            games.map((game, i) => (
-              <GameCard
-                key={game.path}
-                name={game.name}
-                icon={game.icon}
-                emoji={game.emoji ?? "🎮"}
-                selected={i === selectedIdx}
-                onClick={() => {
-                  setSelectedIdx(i);
-                  if (i === selectedIdx) launchGame(game.path);
-                }}
-              />
-            ))
-          )
-        ) : activeCat.id === "settings" ? (
-          <div className="flex flex-col gap-4">
-             <div className="text-indigo-200/30 font-light tracking-widest text-xs uppercase mb-4">
-              Appearance Settings
-            </div>
-            {Object.values(themes).map((t) => (
-               <div 
-                key={t.id}
-                className={`xmb-item ${theme.id === t.id ? "selected" : ""} ${theme.animations.cardHover}`}
-                onClick={() => setTheme(t.id)}
-              >
-                <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar, display: theme.id === t.id ? 'block' : 'none' }} />
+            ) : (
+              <div className="xmb-item selected">
+                <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar }} />
                 <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
-                  <theme.icons.settings size={28} strokeWidth={1.5} color="white" />
+                  <theme.icons.network size={28} strokeWidth={1.5} color="white" />
                 </div>
                 <div className="xmb-item-info">
-                  <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>{t.name}</div>
-                  <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>{theme.id === t.id ? "Active Theme" : "Click to switch"}</div>
+                  <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>{activeCat.label}</div>
+                  <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>System Category Placeholder</div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="xmb-item selected">
-            <div className="xmb-selection-bar" style={{ background: theme.colors.selectionBar }} />
-            <div className="xmb-item-icon" style={{ backgroundColor: theme.colors.cardBg, borderColor: theme.colors.cardBorder }}>
-              <theme.icons.network size={28} strokeWidth={1.5} color="white" />
-            </div>
-            <div className="xmb-item-info">
-              <div className="xmb-item-name" style={{ color: theme.colors.textPrimary }}>{activeCat.label}</div>
-              <div className="xmb-item-sub" style={{ color: theme.colors.textSecondary }}>System Category Placeholder</div>
-            </div>
-          </div>
-        )}
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {selectedGame && (

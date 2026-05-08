@@ -24,6 +24,11 @@ export interface Theme {
     cardHover: string;
     selectionPulse: string;
   };
+  transitions: {
+    tabEnter: any;
+    tabExit: any;
+    tabInitial: any;
+  };
   styles: {
     showXmbBackground: boolean;
     useGlassmorphism: boolean;
@@ -54,6 +59,11 @@ export const XMB_THEME: Theme = {
     cardHover: "hover:scale(1.06) transition-transform duration-300",
     selectionPulse: "animate-selection-pulse", // Requires CSS definition
   },
+  transitions: {
+    tabEnter: { opacity: 1, x: 0, scale: 1 },
+    tabExit: { opacity: 0, x: -20, scale: 0.98 },
+    tabInitial: { opacity: 0, x: 20, scale: 1.02 },
+  },
   styles: {
     showXmbBackground: true,
     useGlassmorphism: true,
@@ -83,6 +93,11 @@ export const MINIMAL_DARK: Theme = {
   animations: {
     cardHover: "hover:translate-x-2 transition-all duration-200",
     selectionPulse: "",
+  },
+  transitions: {
+    tabEnter: { opacity: 1, y: 0 },
+    tabExit: { opacity: 0, y: 10 },
+    tabInitial: { opacity: 0, y: -10 },
   },
   styles: {
     showXmbBackground: false,
