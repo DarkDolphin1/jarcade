@@ -189,14 +189,14 @@ body {
 .xmb-item::after {
   content: '';
   position: absolute;
-  inset: -100px; /* Expand reveal area */
+  inset: -20px; /* Slight bleed for nearby items */
   pointer-events: none;
   background: radial-gradient(
-    400px circle at var(--mouse-x) 50%,
-    rgba(255, 255, 255, 0.08),
+    250px circle at var(--mouse-x) 50%,
+    rgba(255, 255, 255, 0.05),
     transparent 100%
   );
-  opacity: 0;
+  opacity: 0.15; /* Extremely faint base visibility for cross-item glow */
   transition: opacity 0.4s ease;
   z-index: 5;
 }
@@ -213,11 +213,11 @@ body {
   top: 0;
   bottom: 0;
   left: var(--mouse-x);
-  width: 160px;
+  width: 80px; /* Thinner beam */
   transform: translateX(-50%);
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(255, 255, 255, 0.04) 50%, 
+    rgba(255, 255, 255, 0.02) 50%, 
     transparent 100%
   );
   pointer-events: none;
