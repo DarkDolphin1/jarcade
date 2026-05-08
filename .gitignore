@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Project specific
+games/
+src-tauri/config/
+src-tauri/rms/
+freej2me.jar
+emulator/bin/
+src-tauri/target/
