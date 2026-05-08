@@ -201,7 +201,6 @@ body {
   z-index: 5;
 }
 
-.xmb-item:hover::after, 
 .xmb-item.selected::after {
   opacity: 1;
 }
@@ -226,7 +225,6 @@ body {
   z-index: 6;
 }
 
-.xmb-item:hover::before,
 .xmb-item.selected::before {
   opacity: 1;
 }
