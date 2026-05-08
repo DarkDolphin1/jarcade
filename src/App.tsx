@@ -14,7 +14,7 @@ function App() {
 
   const scanGames = async () => {
     setLoading(true);
-    const payload = { path: "./games" };
+    const payload = { path: "../games" };
     console.log("[Frontend] Invoking scan_directory with payload:", payload);
     
     try {

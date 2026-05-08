@@ -11,7 +11,7 @@ pub struct Game {
 
 #[tauri::command]
 fn scan_directory(path: String) -> Result<Vec<Game>, String> {
-    info!("Attempting to scan directory: {}", path);
+    info!("CWD: {:?}, Attempting to scan directory: {}", std::env::current_dir().unwrap(), path);
     
     let path_buf = Path::new(&path);
     let absolute_path = fs::canonicalize(path_buf)
@@ -70,17 +70,18 @@ fn scan_directory(path: String) -> Result<Vec<Game>, String> {
 fn launch_game(game_path: String) -> Result<(), String> {
     info!("Attempting to launch game: {}", game_path);
     
-    let jar_path = "freej2me.jar";
+    let jar_path = "../freej2me.jar";
     if !Path::new(jar_path).exists() {
         let err_msg = format!("Emulator JAR not found: {}", jar_path);
         error!("{}", err_msg);
         return Err(err_msg);
     }
 
-    info!("Executing command: java -jar {} {}", jar_path, game_path);
+    let game_url = format!("file://{}", game_path);
+    info!("Executing command: java -jar {} {}", jar_path, game_url);
     
     let mut command = Command::new("java");
-    command.arg("-jar").arg(jar_path).arg(game_path);
+    command.arg("-jar").arg(jar_path).arg(game_url);
 
     match command.spawn() {
         Ok(child) => {
