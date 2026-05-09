@@ -6,7 +6,7 @@ import { useTheme } from "./theme/ThemeContext";
 import { themes } from "./theme/themes";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Settings, Gamepad2, Globe, Box, RefreshCw, Star } from "lucide-react";
+import { Settings, Gamepad2, Globe } from "lucide-react";
 
 interface Game {
   name: string;

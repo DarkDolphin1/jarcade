@@ -43,6 +43,16 @@ fn get_library_path(app_handle: &tauri::AppHandle) -> PathBuf {
     path
 }
 
+fn get_emulator_path(app_handle: &tauri::AppHandle) -> PathBuf {
+    if let Ok(res_dir) = app_handle.path().resource_dir() {
+        let resource_path = res_dir.join("resources/freej2me.jar");
+        if resource_path.exists() {
+            return resource_path;
+        }
+    }
+    PathBuf::from("../freej2me.jar")
+}
+
 #[tauri::command]
 fn get_library_data(app_handle: tauri::AppHandle) -> Library {
     let path = get_library_path(&app_handle);
@@ -127,15 +137,20 @@ fn get_game_metadata(jar_path: &Path) -> (String, Option<String>) {
 
 #[tauri::command]
 fn scan_directory(app_handle: tauri::AppHandle, path: String) -> Result<Vec<Game>, String> {
-    info!("CWD: {:?}, Attempting to scan directory: {}", std::env::current_dir().unwrap(), path);
+    let target_path = if path == "../games" {
+        let doc_dir = app_handle.path().document_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let portable_games = doc_dir.join("JArcade/games");
+        if portable_games.exists() { portable_games } else { PathBuf::from(&path) }
+    } else {
+        PathBuf::from(&path)
+    };
+
+    info!("Scanning directory: {:?}", target_path);
     
-    let path_buf = Path::new(&path);
-    let absolute_path = fs::canonicalize(path_buf)
-        .or_else(|_| Ok::<PathBuf, String>(path_buf.to_path_buf()))
+    let absolute_path = fs::canonicalize(&target_path)
+        .or_else(|_| Ok::<PathBuf, String>(target_path.clone()))
         .unwrap();
     
-    info!("Resolved absolute path: {:?}", absolute_path);
-
     if !absolute_path.exists() {
         let err_msg = format!("Directory does not exist: {:?}", absolute_path);
         error!("{}", err_msg);
@@ -203,18 +218,16 @@ fn launch_game(app_handle: tauri::AppHandle, state: State<'_, AppState>, game_pa
         }
     }
 
-    let jar_path = "../freej2me.jar";
-    if !Path::new(jar_path).exists() {
-        let err_msg = format!("Emulator JAR not found: {}", jar_path);
-        error!("{}", err_msg);
-        return Err(err_msg);
+    let jar_path = get_emulator_path(&app_handle);
+    if !jar_path.exists() {
+        return Err(format!("Emulator not found at {:?}", jar_path));
     }
 
     let game_url = format!("file://{}", game_path);
-    info!("Executing command: java -jar {} {}", jar_path, game_url);
+    info!("Executing command: java -jar {:?} {}", jar_path, game_url);
     
     let mut command = Command::new("java");
-    command.arg("-jar").arg(jar_path).arg(game_url);
+    command.arg("-jar").arg(&jar_path).arg(game_url);
 
     let mut child = command.spawn().map_err(|e| {
         let err_msg = format!("Failed to spawn java process: {} (OS Error: {:?})", e, e.raw_os_error());
