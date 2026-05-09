@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "JArcade",
   "version": "0.1.0",
-  "identifier": "com.stella.tauri-app",
+  "identifier": "com.jarcade.launcher",
   "build": {
     "beforeDevCommand": "./build.sh && npm run dev",
     "devUrl": "http://localhost:1420",
