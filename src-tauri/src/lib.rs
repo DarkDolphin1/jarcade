@@ -1,16 +1,67 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::io::Read;
+use std::io::{Read, Write};
 use log::{info, error, debug};
 use zip::ZipArchive;
 use base64::{Engine as _, engine::general_purpose};
+use std::sync::Mutex;
+use std::collections::{HashMap, HashSet};
+use tauri::{Manager, Emitter, State};
+
+struct AppState {
+    running_games: Mutex<HashSet<String>>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct GamePersistentData {
+    pub favorite: bool,
+    pub playtime: u64, // total seconds
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct Library {
+    pub games: std::collections::HashMap<String, GamePersistentData>,
+}
 
 #[derive(serde::Serialize)]
 pub struct Game {
     name: String,
     path: String,
-    icon: Option<String>, // Base64 encoded icon
+    icon: Option<String>,
+    favorite: bool,
+    playtime: u64,
+}
+
+fn get_library_path(app_handle: &tauri::AppHandle) -> PathBuf {
+    let mut path = app_handle.path().app_data_dir().expect("failed to get app data dir");
+    if !path.exists() {
+        let _ = fs::create_dir_all(&path);
+    }
+    path.push("library.json");
+    path
+}
+
+#[tauri::command]
+fn get_library_data(app_handle: tauri::AppHandle) -> Library {
+    let path = get_library_path(&app_handle);
+    if !path.exists() {
+        return Library::default();
+    }
+
+    let mut file = fs::File::open(path).unwrap();
+    let mut contents = String::new();
+    let _ = file.read_to_string(&mut contents);
+    serde_json::from_str(&contents).unwrap_or_default()
+}
+
+#[tauri::command]
+fn save_library_data(app_handle: tauri::AppHandle, data: Library) -> Result<(), String> {
+    let path = get_library_path(&app_handle);
+    let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
+    let mut file = fs::File::create(path).map_err(|e| e.to_string())?;
+    file.write_all(json.as_bytes()).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn get_game_metadata(jar_path: &Path) -> (String, Option<String>) {
@@ -74,7 +125,7 @@ fn get_game_metadata(jar_path: &Path) -> (String, Option<String>) {
 }
 
 #[tauri::command]
-fn scan_directory(path: String) -> Result<Vec<Game>, String> {
+fn scan_directory(app_handle: tauri::AppHandle, path: String) -> Result<Vec<Game>, String> {
     info!("CWD: {:?}, Attempting to scan directory: {}", std::env::current_dir().unwrap(), path);
     
     let path_buf = Path::new(&path);
@@ -90,6 +141,7 @@ fn scan_directory(path: String) -> Result<Vec<Game>, String> {
         return Err(err_msg);
     }
 
+    let library = get_library_data(app_handle);
     let mut games = Vec::new();
     let dir = fs::read_dir(&absolute_path).map_err(|e| {
         let err_msg = format!("Failed to read directory {:?}: {} (OS Error: {:?})", absolute_path, e, e.raw_os_error());
@@ -103,13 +155,21 @@ fn scan_directory(path: String) -> Result<Vec<Game>, String> {
         
         if path_buf.is_file() && path_buf.extension().and_then(|s| s.to_str()) == Some("jar") {
             let (name, icon) = get_game_metadata(&path_buf);
+            let p_str = path_buf.to_string_lossy().to_string();
             
+            let p_data = library.games.get(&p_str).cloned().unwrap_or(GamePersistentData {
+                favorite: false,
+                playtime: 0,
+            });
+
             debug!("Found game: {} at {:?}", name, path_buf);
             
             games.push(Game {
                 name,
-                path: path_buf.to_string_lossy().to_string(),
+                path: p_str,
                 icon,
+                favorite: p_data.favorite,
+                playtime: p_data.playtime,
             });
         }
     }
@@ -119,9 +179,29 @@ fn scan_directory(path: String) -> Result<Vec<Game>, String> {
 }
 
 #[tauri::command]
-fn launch_game(game_path: String) -> Result<(), String> {
+fn add_playtime(app_handle: tauri::AppHandle, game_path: String, seconds: u64) -> Result<(), String> {
+    let mut library = get_library_data(app_handle.clone());
+    let entry = library.games.entry(game_path).or_insert(GamePersistentData {
+        favorite: false,
+        playtime: 0,
+    });
+    entry.playtime += seconds;
+    save_library_data(app_handle, library)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn launch_game(app_handle: tauri::AppHandle, state: State<'_, AppState>, game_path: String) -> Result<(), String> {
     info!("Attempting to launch game: {}", game_path);
     
+    // Check if already running
+    {
+        let running = state.running_games.lock().unwrap();
+        if running.contains(&game_path) {
+            return Err("This game is already running.".to_string());
+        }
+    }
+
     let jar_path = "../freej2me.jar";
     if !Path::new(jar_path).exists() {
         let err_msg = format!("Emulator JAR not found: {}", jar_path);
@@ -135,17 +215,76 @@ fn launch_game(game_path: String) -> Result<(), String> {
     let mut command = Command::new("java");
     command.arg("-jar").arg(jar_path).arg(game_url);
 
-    match command.spawn() {
-        Ok(child) => {
-            info!("Process spawned successfully with PID: {:?}", child.id());
-            Ok(())
-        }
-        Err(e) => {
-            let err_msg = format!("Failed to spawn java process: {} (OS Error: {:?})", e, e.raw_os_error());
-            error!("{}", err_msg);
-            Err(err_msg)
-        }
+    let mut child = command.spawn().map_err(|e| {
+        let err_msg = format!("Failed to spawn java process: {} (OS Error: {:?})", e, e.raw_os_error());
+        error!("{}", err_msg);
+        err_msg
+    })?;
+
+    let game_path_clone = game_path.clone();
+    let app_handle_clone = app_handle.clone();
+    
+    // Emit "game-started" event
+    let _ = app_handle.emit("game-started", &game_path_clone);
+
+    // Track in state
+    {
+        let mut running = state.running_games.lock().unwrap();
+        running.insert(game_path_clone.clone());
     }
+
+    // Spawn a thread to wait for the process to exit
+    std::thread::spawn(move || {
+        let start_time = std::time::Instant::now();
+        match child.wait() {
+            Ok(status) => {
+                let duration = start_time.elapsed().as_secs();
+                info!("Game process exited with status: {:?}. Played for {} seconds.", status, duration);
+                
+                // Remove from state
+                {
+                    let state = app_handle_clone.state::<AppState>();
+                    let mut running = state.running_games.lock().unwrap();
+                    running.remove(&game_path_clone);
+                }
+
+                // Update playtime in library
+                let _ = add_playtime(app_handle_clone.clone(), game_path_clone.clone(), duration);
+                
+                // Emit "game-exited" event
+                let _ = app_handle_clone.emit("game-exited", &game_path_clone);
+            }
+            Err(e) => {
+                error!("Error waiting for game process: {}", e);
+                // Ensure cleanup even on error
+                {
+                    let state = app_handle_clone.state::<AppState>();
+                    let mut running = state.running_games.lock().unwrap();
+                    running.remove(&game_path_clone);
+                }
+                let _ = app_handle_clone.emit("game-exited", &game_path_clone);
+            }
+        }
+    });
+
+    Ok(())
+}
+#[tauri::command]
+fn toggle_favorite(app_handle: tauri::AppHandle, game_path: String) -> Result<bool, String> {
+    let mut library = get_library_data(app_handle.clone());
+    let entry = library.games.entry(game_path).or_insert(GamePersistentData {
+        favorite: false,
+        playtime: 0,
+    });
+    entry.favorite = !entry.favorite;
+    let new_val = entry.favorite;
+    save_library_data(app_handle, library)?;
+    Ok(new_val)
+}
+
+#[tauri::command]
+fn get_running_games(state: State<'_, AppState>) -> HashSet<String> {
+    state.running_games.lock().unwrap().clone()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -154,8 +293,17 @@ pub fn run() {
     info!("Initializing JArcade Backend...");
 
     tauri::Builder::default()
+        .manage(AppState { running_games: Mutex::new(HashSet::new()) })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![scan_directory, launch_game])
+        .invoke_handler(tauri::generate_handler![
+            scan_directory, 
+            launch_game,
+            get_library_data,
+            save_library_data,
+            toggle_favorite,
+            add_playtime,
+            get_running_games
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
