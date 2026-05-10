@@ -52,11 +52,12 @@ body {
   border: 1px solid rgba(0, 120, 215, 0.12);
   animation: arcFlow 12s ease-in-out infinite;
   transform-origin: 50% 100%;
+  will-change: transform, opacity;
 }
 
 @keyframes arcFlow {
   0%, 100% { transform: scale(1) translateY(0); opacity: 0.6; }
-  50%       { transform: scale(1.04) translateY(-12px); opacity: 1; }
+  50%       { transform: scale(1.04) translateY(-8px); opacity: 1; }
 }
 
 /* XMB top bar */
@@ -178,6 +179,7 @@ body {
   transition: opacity 0.3s ease;
   pointer-events: none;
   z-index: 0;
+  will-change: opacity;
 }
 
 .xmb-item.selected .xmb-selection-bar {
@@ -189,20 +191,21 @@ body {
 .xmb-item::after {
   content: '';
   position: absolute;
-  inset: -20px; /* Slight bleed for nearby items */
+  inset: -20px;
   pointer-events: none;
-  background: radial-gradient(
-    300px circle at var(--mouse-x) 50%,
-    rgba(255, 255, 255, 0.03),
-    transparent 100%
-  );
-  opacity: 0.08; /* Extremely faint base visibility */
+  opacity: 0; /* Save CPU: Hidden until selected */
   transition: opacity 0.6s ease;
   z-index: 5;
+  will-change: opacity;
 }
 
 .xmb-item.selected::after {
-  opacity: 0.7; /* Keep it spectral and soft */
+  background: radial-gradient(
+    300px circle at var(--mouse-x) 50%,
+    rgba(255, 255, 255, 0.035),
+    transparent 100%
+  );
+  opacity: 0.65;
 }
 
 /* Extra sharpness for the X-axis banding twist (Vertical component) */
@@ -212,26 +215,27 @@ body {
   top: 0;
   bottom: 0;
   left: var(--mouse-x);
-  width: 160px; /* Wider beam for smoother fade */
+  width: 160px;
   transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  z-index: 6;
+  will-change: opacity;
+}
+
+.xmb-item.selected::before {
   background: linear-gradient(90deg, 
     transparent 0%, 
     rgba(255, 255, 255, 0.01) 50%, 
     transparent 100%
   );
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s ease;
-  z-index: 6;
-}
-
-.xmb-item.selected::before {
   opacity: 0.5;
 }
 
 @keyframes selectionPulse {
-  0%, 100% { opacity: 0.8; filter: brightness(1); }
-  50% { opacity: 1; filter: brightness(1.3) contrast(1.1); }
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 .xmb-item-icon {

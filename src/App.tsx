@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import GameCard from "./components/GameCard";
@@ -122,11 +122,15 @@ export default function App() {
   }, [games, selectedIdx, catIdx, launching, setTheme]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    (e.currentTarget as HTMLElement).style.setProperty("--mouse-x", `${x}px`);
-    (e.currentTarget as HTMLElement).style.setProperty("--mouse-y", `${y}px`);
+    
+    window.requestAnimationFrame(() => {
+      target.style.setProperty("--mouse-x", `${x}px`);
+      target.style.setProperty("--mouse-y", `${y}px`);
+    });
   }, []);
 
   useEffect(() => {
@@ -172,6 +176,11 @@ export default function App() {
 
   useEffect(() => { scanGames(); }, [scanGames]);
 
+  const videoUrl = useMemo(() => {
+    const raw = theme.assets?.videoBackground;
+    return raw ? (raw.startsWith("/") ? raw : convertFileSrc(raw)) : null;
+  }, [theme.assets?.videoBackground]);
+
   if (themeLoading) {
     return (
       <div className="min-h-screen bg-[#000814] flex items-center justify-center">
@@ -183,10 +192,6 @@ export default function App() {
   const activeCat = CATEGORIES[catIdx];
   const selectedGame = activeCat.id === "game" ? games[selectedIdx] : null;
   const arcs = [340, 420, 500, 580, 660, 740, 820];
-  const rawVideoPath = theme.assets?.videoBackground;
-  const convertedVideoUrl = rawVideoPath 
-    ? (rawVideoPath.startsWith("/") ? rawVideoPath : convertFileSrc(rawVideoPath)) 
-    : null;
 
   return (
     <div style={{ background: "#000", minHeight: "100vh" }}>
@@ -206,14 +211,14 @@ export default function App() {
           }}
         >
           {/* ── Video background ── */}
-          {convertedVideoUrl && (
+          {videoUrl && (
             <video
               autoPlay
               loop
               muted
               playsInline
               className="fixed inset-0 w-full h-full object-cover z-0 opacity-40 pointer-events-none"
-              src={convertedVideoUrl}
+              src={videoUrl}
               onLoadedData={() => console.log(`[App] Video loaded: ${theme.assets?.videoBackground}`)}
               onError={(e) => console.error(`[App] Video failed: ${theme.assets?.videoBackground}. Error Code: ${(e.target as any).error?.code}`, e)}
             />
