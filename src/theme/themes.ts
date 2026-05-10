@@ -33,6 +33,10 @@ export interface Theme {
     showXmbBackground: boolean;
     useGlassmorphism: boolean;
   };
+  assets?: {
+    videoBackground?: string;
+    startupAudio?: string;
+  };
 }
 
 export const XMB_THEME: Theme = {
@@ -57,7 +61,7 @@ export const XMB_THEME: Theme = {
   },
   animations: {
     cardHover: "hover:scale(1.06) transition-transform duration-300",
-    selectionPulse: "animate-selection-pulse", // Requires CSS definition
+    selectionPulse: "animate-selection-pulse",
   },
   transitions: {
     tabEnter: { opacity: 1, x: 0, scale: 1 },
@@ -105,7 +109,47 @@ export const MINIMAL_DARK: Theme = {
   }
 };
 
+export const XMB_WAVE: Theme = {
+  id: "xmb_wave",
+  name: "XMB Wave",
+  colors: {
+    background: "#000000",
+    textPrimary: "#ffffff",
+    textSecondary: "rgba(255, 255, 255, 0.4)",
+    accent: "#0070d1",
+    cardBg: "rgba(255, 255, 255, 0.05)",
+    cardBorder: "rgba(255, 255, 255, 0.08)",
+    selectionBar: "linear-gradient(90deg, rgba(0, 100, 200, 0.0) 0%, rgba(0, 100, 200, 0.18) 20%, rgba(0, 120, 220, 0.22) 50%, rgba(0, 100, 200, 0.18) 80%, rgba(0, 100, 200, 0.0) 100%)",
+  },
+  icons: {
+    settings: Settings,
+    game: Gamepad2,
+    network: Globe,
+    fallback: Gamepad2,
+    loading: RefreshCw,
+    empty: Box,
+  },
+  animations: {
+    cardHover: "hover:scale(1.06) transition-transform duration-300",
+    selectionPulse: "animate-selection-pulse",
+  },
+  transitions: {
+    tabEnter: { opacity: 1, x: 0, scale: 1 },
+    tabExit: { opacity: 0, x: -20, scale: 0.98 },
+    tabInitial: { opacity: 0, x: 20, scale: 1.02 },
+  },
+  styles: {
+    showXmbBackground: false,
+    useGlassmorphism: true,
+  },
+  assets: {
+    videoBackground: "/theme/xmb-wave/XMB_Wave.webm",
+    startupAudio: "/theme/xmb-wave/PS4_INTRO_THEME_SONG.ogg",
+  }
+};
+
 export const themes: Record<string, Theme> = {
   xmb: XMB_THEME,
+  xmb_wave: XMB_WAVE,
   minimal: MINIMAL_DARK,
 };

@@ -1,13 +1,12 @@
 import React from "react";
 import { useTheme } from "../theme/ThemeContext";
-import { Gamepad2, Star } from "lucide-react";
+import { Star } from "lucide-react";
 
 interface GameCardProps {
   name: string;
   onClick: () => void;
   selected: boolean;
   icon?: string;
-  emoji: string;
   favorite: boolean;
   playtime: number;
   isRunning?: boolean;
@@ -19,7 +18,6 @@ const GameCard: React.FC<GameCardProps> = ({
   onClick, 
   selected, 
   icon, 
-  emoji, 
   favorite, 
   playtime, 
   isRunning,
